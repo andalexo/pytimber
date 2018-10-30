@@ -155,6 +155,7 @@ class LoggingDB(object):
 
     def getDescription(self, pattern):
         """Get Variable Description from pattern. Wildcard is '%'."""
+        # return dict
         return dict([(vv.getVariableName(), vv.getDescription())
                      for vv in self.getVariables(pattern)])
 
@@ -379,38 +380,48 @@ class LoggingDB(object):
         for stat in data.getStatisticsList():
             count = stat.getValueCount()
             if count > 0:
+                smin = stat.getMinValue()
+                smax = stat.getMaxValue()
+                savg = stat.getAvgValue()
+                sstd = stat.getStandardDeviationValue()
                 s = Stat(
                     self.fromTimestamp(stat.getMinTstamp(), unixtime),
                     self.fromTimestamp(stat.getMaxTstamp(), unixtime),
                     int(count),
-                    stat.getMinValue().doubleValue(),
-                    stat.getMaxValue().doubleValue(),
-                    stat.getAvgValue().doubleValue(),
-                    stat.getStandardDeviationValue().doubleValue()
+                    smin.doubleValue() if smin is not None else None,
+                    smax.doubleValue() if smax is not None else None,
+                    savg.doubleValue() if savg is not None else None,
+                    sstd.doubleValue() if sstd is not None else None,
                 )
 
                 out[stat.getVariableName()] = s
 
         return out
 
-    #    def getSize(self, pattern_or_list, t1, t2):
-    #        ts1 = self.toTimestamp(t1)
-    #        ts2 = self.toTimestamp(t2)
-    #
-    #        # Build variable list
-    #        variables = self.getVariablesList(pattern_or_list)
-    #        if len(variables) == 0:
-    #            log.warning('No variables found.')
-    #            return {}
-    #        else:
-    #            logvars = []
-    #            for v in variables:
-    #                logvars.append(v)
-    #            log.info('List of variables to be queried: {0}'.format(
-    #                ', '.join(logvars)))
-    #        # Acquire
-    #        for v in variables:
-    #            return self._ts.getJVMHeapSizeEstimationForDataInTimeWindow(v,ts1,ts2,None,None)
+    def getSize(self, pattern_or_list, t1, t2):
+        ts1 = self.toTimestamp(t1)
+        ts2 = self.toTimestamp(t2)
+
+        # Build variable list
+        variables = self.getVariablesList(pattern_or_list)
+        self._log.warning('%s | %s' % (variables, type(variables)))
+        if len(variables) == 0:
+            self._log.warning('No variables found.')
+            return {}
+        else:
+            logvars = []
+            for v in variables:
+                logvars.append(v)
+            self._log.info('List of variables to be queried: {0}'.format(
+                ', '.join(logvars)))
+
+        # Acquire
+        tot_size_mb = 0
+        for v in variables:
+            jvar = variables.getVariable(v)
+            size = self._ts.getJVMHeapSizeEstimationForDataInTimeWindow(jvar, ts1, ts2, None, None)
+            tot_size_mb += size
+        return tot_size_mb
 
     def get(self, pattern_or_list, t1, t2=None,
             fundamental=None, unixtime=True):
