@@ -21,3 +21,10 @@ __cmmnbuild_deps__ = [
     "slf4j-api",
     "log4j"
 ]
+
+__gradle_deps__ = [
+    "org.slf4j:slf4j-log4j12:+",
+    "org.slf4j:slf4j-api:+",
+    "log4j:log4j:+",
+]
+
